@@ -60,3 +60,14 @@ STR_TO_LVQ_STRATEGY: Final[dict[str, svs.LVQStrategy]] = {
     "sequential": svs.LVQStrategy.Sequential,
     "turbo": svs.LVQStrategy.Turbo,
 }
+
+SUFFIX_TO_DTYPE: Final = {
+    ".fvecs": np.float32,
+    ".hvecs": np.float16,
+    ".bvecs": np.uint8,
+    ".ivecs": np.uint32,
+}
+
+DTYPE_TO_SUFFIX: Final = {
+    v: k for k, v in SUFFIX_TO_DTYPE.items()
+}
