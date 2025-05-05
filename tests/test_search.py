@@ -4,7 +4,7 @@ import pytest
 import svs
 
 from svsbench.consts import SVS_TYPES
-from svsbench.search import search
+from svsbench.search import main, search
 
 
 @pytest.mark.parametrize("static", (True, False))
@@ -44,3 +44,8 @@ def test_search(
 
 def test_search_with_separate_data_dir():
     pytest.xfail("TODO: Implement")
+
+
+def test_main():
+    with pytest.raises(SystemExit, match="^0$"):
+        main(["--help"])

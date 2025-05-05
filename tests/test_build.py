@@ -46,3 +46,7 @@ def test_build_dynamic(svs_type, tmp_vecs):
         distance=svs.DistanceType.L2,
         convert_vecs=True,
     )
+
+def test_main():
+    with pytest.raises(SystemExit, match="^0$"):
+        svsbench.build.main(["--help"])

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Merge multiple *vecs files into one."""
 import argparse
+import logging
 import struct
 from pathlib import Path
 from typing import Final
@@ -10,6 +11,9 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
+from . import utils
+
+logger = logging.getLogger(__file__)
 
 SUFFIX_TO_DTYPE: Final = {
     ".fvecs": np.float32,
@@ -59,6 +63,7 @@ def write(inputs: list[Path], output: Path, num_vectors: int | None) -> None:
 def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Read command line arguments."""
     parser = argparse.ArgumentParser(description=__file__.__doc__)
+    utils.add_common_arguments(parser)
     parser.add_argument(
             "i", help="Input file names", action="extend", type=Path, nargs="+"
     )
@@ -69,6 +74,11 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main():
     args = _read_args()
+    log_file = utils.configure_logger(
+        logger, args.log_dir if args.log_dir is not None else args.out_dir
+    )
+    print("Logging to", log_file, sep="\n")
+    utils.check_uncommitted_and_log_version(logger, args.uncommitted)
     write(args.i, args.o, args.num_vectors)
 
 

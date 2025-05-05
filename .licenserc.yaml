@@ -19,5 +19,6 @@ header:
     - "requirements.txt"
     - "SECURITY.md"
     - "uv.lock"
+    - "src/svsbench/_version.py"
 
   comment: never

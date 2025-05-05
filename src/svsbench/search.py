@@ -311,6 +311,7 @@ def main(argv: str | None = None) -> None:
         logger, args.log_dir if args.log_dir is not None else args.out_dir
     )
     print("Logging to", log_file, sep="\n")
+    utils.check_uncommitted_and_log_version(logger, args.uncommitted)
     logger.info({"argv": sys.argv})
     search(
         idx_dir=args.idx_dir,

@@ -14,9 +14,8 @@ import numpy as np
 import svs
 from tqdm import tqdm
 
-from . import consts
+from . import consts, utils
 from .loader import create_loader
-from . import utils
 
 logger = logging.getLogger(__file__)
 
@@ -97,6 +96,7 @@ def main(argv: str | None = None) -> None:
         logger, args.log_dir if args.log_dir is not None else args.out_dir
     )
     print("Logging to", log_file, sep="\n")
+    utils.check_uncommitted_and_log_version(logger, args.uncommitted)
     logger.info({"argv": argv if argv else sys.argv})
     args.out_dir.mkdir(exist_ok=True)
     if args.static:

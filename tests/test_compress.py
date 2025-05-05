@@ -33,3 +33,7 @@ def test_compress(
         max_threads=1,
         load_from_static=not index_dynamic,
     )
+
+def test_main():
+    with pytest.raises(SystemExit, match="^0$"):
+        svsbench.compress.main(["--help"])

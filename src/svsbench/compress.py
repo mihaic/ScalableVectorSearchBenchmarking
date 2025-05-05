@@ -18,6 +18,7 @@ logger = logging.getLogger(__file__)
 def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Read command line arguments."""
     parser = argparse.ArgumentParser(description=__file__.__doc__)
+    utils.add_common_arguments(parser)
     parser.add_argument("--idx_dir", help="Index dir", type=Path)
     parser.add_argument(
         "--no_dynamic", action="store_true", help="Do not use dynamic index"
@@ -27,7 +28,6 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Load from static index",
     )
-    utils.add_common_arguments(parser)
     return parser.parse_args(argv)
 
 
@@ -37,6 +37,7 @@ def main(argv: str | None = None) -> None:
         logger, args.log_dir if args.log_dir is not None else args.out_dir
     )
     print("Logging to", log_file, sep="\n")
+    utils.check_uncommitted_and_log_version(logger, args.uncommitted)
     logger.info({"argv": argv if argv else sys.argv})
     compress(
         idx_dir=args.idx_dir,
