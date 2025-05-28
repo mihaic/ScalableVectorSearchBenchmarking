@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+all = ["svsbench[h5py]"]
 h5py = [
     "h5py>=3.13.0",
     "typer-slim>=0.15.2",

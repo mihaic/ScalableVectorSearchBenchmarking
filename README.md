@@ -10,8 +10,14 @@ Scalable Vector Search Benchmarking enables the benchmarking or evaluation of th
 Requires Python >= 3.12.
 
 ```sh
-python -m pip install \
-    git+https://github.com/IntelLabs/ScalableVectorSearchBenchmarking
+python -m pip install svsbench
+```
+
+To enable optional functionality, add `all` (or just a subset) to the install command, e.g.:
+
+```sh
+python -m pip install svsbench[all]
+python -m pip install svsbench[h5py]
 ```
 
 ## Usage
@@ -74,4 +80,15 @@ python -m svsbench.search \
     --search_buffer_capacity 36 \
     --prefetch_lookahead 10 \
     --prefetch_step 4
+```
+
+### Optional functionality
+
+#### h5py
+
+Adds a command for converting HDF5 [ANN-Benchmarks](https://github.com/erikbern/ann-benchmarks) datasets to the [vecs format](https://intel.github.io/ScalableVectorSearch/python/common.html#svs.read_vecs).
+
+```sh
+python -m svsbench.convert_data \
+    dataset.hdf5
 ```

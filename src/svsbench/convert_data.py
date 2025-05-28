@@ -12,23 +12,24 @@ def convert_hdf5(input_path: Path, output_dir: Path):
     with h5py.File(input_path) as file:
         name_prefix = output_dir / input_path.stem
         test = np.array(file["test"])
+        train = np.array(file["train"])
+        neighbors = np.array(file["neighbors"])
+        if neighbors.dtype.kind not in "iu":
+            raise ValueError(f"Neighbors dtype not integer: {neighbors.dtype}")
+        if np.any(neighbors < 0):
+            raise ValueError("Negative neighbors found")
+        if np.any(neighbors > np.iinfo(np.uint32).max):
+            raise ValueError("Neighbors exceed uint32 max value")
+        svs.write_vecs(
+            neighbors.astype(np.uint32), f"{name_prefix}_neighbors.ivecs"
+        )
         svs.write_vecs(
             test,
             f"{name_prefix}_test{consts.DTYPE_TO_SUFFIX[test.dtype.type]}",
         )
-        train = np.array(file["train"])
         svs.write_vecs(
             train,
             f"{name_prefix}_train{consts.DTYPE_TO_SUFFIX[train.dtype.type]}",
-        )
-        neighbors = np.array(file["neighbors"])
-        if np.any(neighbors < 0):
-            raise ValueError("Negative neighbors found")
-        if neighbors.dtype.type is not np.int32:
-            raise ValueError("Neighbors dataset is not int32")
-        svs.write_vecs(
-            neighbors.astype(np.uint32),
-            f"{name_prefix}_neighbors.ivecs",
         )
 
 
