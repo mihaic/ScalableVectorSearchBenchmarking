@@ -36,6 +36,7 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--shuffle", help="Shuffle order of vectors", action="store_true"
     )
+    parser.add_argument("--npy", help="Output as .npy", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -56,6 +57,7 @@ def main(argv: str | None = None) -> None:
         out_file=args.out_file,
         shuffle=args.shuffle,
         seed=args.seed,
+        npy=args.npy,
     )
 
 
@@ -70,10 +72,15 @@ def generate_ground_truth(
     out_file: Path | None = None,
     shuffle: bool = False,
     seed: int = 42,
+    npy: bool = False,
 ) -> None:
     if out_file is None:
         out_file = utils.ground_truth_path(
-            vecs_path, query_file, distance, num_vectors, seed if shuffle else None,
+            vecs_path,
+            query_file,
+            distance,
+            num_vectors,
+            seed if shuffle else None,
         )
     else:
         if out_file.suffix != ".ivecs":
@@ -88,7 +95,11 @@ def generate_ground_truth(
         vectors = vectors[np.random.default_rng(seed).permutation(num_vectors)]
     index = svs.Flat(vectors, distance=distance, num_threads=num_threads)
     idxs, _ = index.search(queries, k)
-    svs.write_vecs(idxs.astype(np.uint32), out_file)
+    if npy:
+        out_file = out_file.with_suffix(".npy")
+        np.save(out_file, idxs)
+    else:
+        svs.write_vecs(idxs.astype(np.uint32), out_file)
     logger.info({"ground_truth_saved": out_file})
 
 
