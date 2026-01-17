@@ -1,3 +1,4 @@
+"""Convert data between formats."""
 from pathlib import Path
 
 import h5py
@@ -7,8 +8,10 @@ import typer
 
 from . import consts
 
+app = typer.Typer(help=__doc__)
 
-def convert_hdf5(input_path: Path, output_dir: Path):
+@app.command()
+def hdf5tovecs(input_path: Path, output_dir: Path = Path(".")):
     with h5py.File(input_path) as file:
         name_prefix = output_dir / input_path.stem
         neighbors = np.array(file["neighbors"])
@@ -36,14 +39,15 @@ def convert_hdf5(input_path: Path, output_dir: Path):
             f"{name_prefix}_train{consts.DTYPE_TO_SUFFIX[train.dtype.type]}",
         )
 
-
-def main(input_path: Path, output_dir: Path = Path(".")):
-    match suffix := input_path.suffix:
-        case ".hdf5":
-            convert_hdf5(input_path, output_dir)
-        case _:
-            raise ValueError(f"Unsupported suffix: {suffix}")
-
+@app.command()
+def vecstohdf5(train_path: Path, query_path: Path, ground_truth_path: Path, output_path: Path):
+    with h5py.File(output_path, "w") as file:
+        train = svs.read_vecs(str(train_path))
+        query = svs.read_vecs(str(query_path))
+        ground_truth = svs.read_vecs(str(ground_truth_path))
+        file.create_dataset("train", data=train)
+        file.create_dataset("test", data=query)
+        file.create_dataset("neighbors", data=ground_truth)
 
 if __name__ == "__main__":
-    typer.run(main)
+    app()
