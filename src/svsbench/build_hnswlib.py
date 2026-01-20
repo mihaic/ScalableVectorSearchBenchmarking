@@ -66,6 +66,7 @@ def main() -> None:
     )
 
 def build(*, vecs_path: Path, out_path: Path, num_threads: int, distance: str, ef_construction: int, m: int, num_vectors: int | None, batch_size: int = 0) -> None:
+    out_path.mkdir(exist_ok=True)
     X_db = merge.read_vecs(vecs_path)
     if num_vectors is not None:
         X_db = X_db[:num_vectors]
