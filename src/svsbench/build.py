@@ -76,6 +76,9 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--shuffle", help="Shuffle order of vectors", action="store_true"
     )
     parser.add_argument(
+        "--shuffle_init_vectors", help="Shuffle order of initial vectors", action="store_true"
+    )
+    parser.add_argument(
         "--static", help="Index is static", action="store_true"
     )
     parser.add_argument(
@@ -207,6 +210,7 @@ def main(argv: list[str] | None = None) -> None:
             leanvec_dims=args.leanvec_dims,
             data_matrix=data_matrix,
             query_matrix=query_matrix,
+            shuffle_init_vectors=args.shuffle_init_vectors,
         )
         np.save(args.out_dir / (name + ".ingest.npy"), ingest_time)
         if args.num_vectors_delete > 0:
@@ -241,6 +245,7 @@ def build_dynamic(
     leanvec_dims: int | None = None,
     data_matrix: npt.NDArray | None = None,
     query_matrix: npt.NDArray | None = None,
+    shuffle_init_vectors: bool = False,
 ) -> tuple[svs.DynamicVamana, str]:
     """Build SVS index."""
     logger.info({"build_args": locals()})
@@ -305,11 +310,17 @@ def build_dynamic(
         )
 
         if svs_type.startswith(("float32", "leanvec", "lvq")):
+            if shuffle_init_vectors:
+                permutation = np.random.default_rng(seed).permutation(
+                    num_vectors_init
+                )
+            else:
+                permutation = np.arange(num_vectors_init)
             start = time.perf_counter()
             index = svs.DynamicVamana.build(
                 parameters,
-                vectors[:num_vectors_init],
-                vector_ids[:num_vectors_init],
+                vectors[:num_vectors_init][permutation],
+                vector_ids[:num_vectors_init][permutation],
                 distance,
                 num_threads=max_threads_init,
             )
