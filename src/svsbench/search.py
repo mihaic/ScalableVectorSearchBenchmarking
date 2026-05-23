@@ -128,8 +128,8 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="all",
     )
     parser.add_argument(
-        "--shuffle_ground_truth",
-        help="Shuffle ground truth. See also svsbench.build --shuffle",
+        "--shuffle",
+        help="Search an index built with svsbench.build --shuffle",
         action="store_true",
     )
     return parser.parse_args(argv)
@@ -148,7 +148,7 @@ def search(
     max_threads=255,
     search_window_sizes: list[int] | None = None,
     recall: float = 0.9,
-    compress: bool = True,
+    compress: bool = False,
     leanvec_dims: int | None = -4,
     leanvec_alignment: int | None = 32,
     num_rep: int = 5,
@@ -164,9 +164,9 @@ def search(
     lvq_strategy: svs.LVQStrategy | None = None,
     train_prefetchers: bool = True,
     search_buffer_optimization: svs.VamanaSearchBufferOptimization = svs.VamanaSearchBufferOptimization.All,
-    shuffle_ground_truth: bool = False,
+    shuffle: bool = False,
     seed: int = 42,
-):
+) -> tuple[np.ndarray, np.ndarray, float]:
     logger.info({"search_args": locals()})
     logger.info(utils.read_system_config())
     if query_path is None:
@@ -216,8 +216,10 @@ def search(
 
     query = svs.read_vecs(str(query_path))
     ground_truth = svs.read_vecs(str(ground_truth_path))
-    if shuffle_ground_truth:
-        np.random.default_rng(seed).shuffle(ground_truth)
+    if shuffle:
+        dtype = ground_truth.dtype
+        permutation = np.random.default_rng(seed).permutation(index.size)
+        ground_truth = np.argsort(permutation)[ground_truth].astype(dtype=dtype, casting="same_value")
 
     for batch_size_idx, batch_size in enumerate(batch_sizes):
         index.num_threads = min(max_threads, batch_size)
@@ -300,18 +302,23 @@ def search(
         p95s = []
         for _ in tqdm(range(num_rep)):
             total_time = 0
-            results = np.empty((0, count), np.int32)
+            results = None
             batch_times = []
             for batch_idx in tqdm(range(num_batches)):
                 init_batch = batch_idx * batch_size
                 end_batch = min(init_batch + batch_size, query_size)
 
                 start = time.perf_counter()
-                result, _ = index.search(query[init_batch:end_batch], count)
+                result, batch_distances = index.search(query[init_batch:end_batch], count)
                 batch_time = time.perf_counter() - start
                 total_time += batch_time
                 batch_times.append(batch_time)
-                results = np.append(results, result, axis=0)
+                if results is None:
+                    results = result
+                    distances = batch_distances
+                else:
+                    results = np.append(results, result, axis=0)
+                    distances = np.append(distances, batch_distances, axis=0)
 
             qps.append(query_size / total_time)
             p95s.append(np.percentile(batch_times, 95))
@@ -338,6 +345,7 @@ def search(
                 },
             }
         )
+        return results, distances, recall
 
 
 def main(argv: str | None = None) -> None:
@@ -381,7 +389,7 @@ def main(argv: str | None = None) -> None:
         search_buffer_optimization=STR_TO_CALIBRATE_SEARCH_BUFFER[
             args.calibrate_search_buffer
         ],
-        shuffle_ground_truth=args.shuffle_ground_truth,
+        shuffle=args.shuffle,
         seed=args.seed,
     )
 

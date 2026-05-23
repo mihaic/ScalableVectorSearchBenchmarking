@@ -73,7 +73,11 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
     )
     parser.add_argument(
-        "--shuffle", help="Shuffle order of vectors", action="store_true"
+        "--shuffle", help="Shuffle order of vectors."
+        " Either search with svsbench.search --shuffle"
+        " or regenerate the ground truth with"
+        " svsbench.generate_ground_truth --shuffle",
+        action="store_true",
     )
     parser.add_argument(
         "--static", help="Index is static", action="store_true"
@@ -469,7 +473,7 @@ def save(
     index: svs.Vamana | svs.DynamicVamana,
     out_dir: Path = Path("out"),
     name: str = "index",
-) -> None:
+) -> Path:
     idx_dir = out_dir / name
     idx_dir.mkdir(exist_ok=True)
     index.save(
@@ -478,6 +482,7 @@ def save(
         str(idx_dir / "data"),
     )
     logger.info({"index_saved": idx_dir})
+    return idx_dir
 
 
 if __name__ == "__main__":
