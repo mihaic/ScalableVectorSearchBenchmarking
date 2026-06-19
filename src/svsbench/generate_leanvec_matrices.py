@@ -45,7 +45,7 @@ def generate_leanvec_matrices(
 ) -> tuple[tuple[npt.NDArray, npt.NDArray], tuple[int, int]]:
     """Generate LeanVec matrices from base vectors and query vectors."""
     base_vectors = merge.read_vecs(vecs_file, max_vectors)
-    query_vectors = merge.read_vecs(train_query_file)
+    query_vectors = merge.read_vecs(train_query_file, max_vectors)
     dim = base_vectors.shape[1]
     if leanvec_dims is None:
         leanvec_dims = consts.DEFAULT_LEANVEC_DIMS

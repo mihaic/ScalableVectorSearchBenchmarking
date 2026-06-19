@@ -103,7 +103,7 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--train_max_vectors",
-        help="Maximum number of base vectors from vecs_file"
+        help="Maximum number of vectors from vecs_file and train_query_file"
         " to use for LeanVec out-of-distribution training (0 for all)",
         type=int,
         default=consts.DEFAULT_LEANVEC_TRAIN_MAX_VECTORS,
