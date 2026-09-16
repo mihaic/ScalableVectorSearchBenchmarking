@@ -86,3 +86,10 @@ python -m svsbench.search \
     --prefetch_lookahead 10 \
     --prefetch_step 4
 ```
+
+### Utilities
+
+#### Truncating *.fvecs files
+```sh
+python -m svsbench.truncate_fvecs vectors.fvecs 1000
+```
