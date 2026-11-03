@@ -92,6 +92,11 @@ def _read_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--prefetch_step", help="Prefetch step", type=int, action="append"
     )
     parser.add_argument(
+        "--no_search_buffer_visited_set",
+        help="Disable the search buffer visited set",
+        action="store_true",
+    )
+    parser.add_argument(
         "--recall",
         help="Target recall for calibration",
         type=float,
@@ -155,6 +160,7 @@ def search(
     search_buffer_capacities: list[int] | None = None,
     prefetch_lookaheads: list[int] | None = None,
     prefetch_steps: list[int] | None = None,
+    search_buffer_visited_set: bool | None = None,
     static: bool = False,
     distance: svs.DistanceType,
     query_type: svs.DataType = svs.DataType.float32,
@@ -286,6 +292,10 @@ def search(
                 search_params_kwargs["prefetch_step"] = prefetch_steps[
                     batch_size_idx
                 ]
+            if search_buffer_visited_set is not None:
+                search_params_kwargs["search_buffer_visited_set"] = (
+                    search_buffer_visited_set
+                )
             search_params = svs.VamanaSearchParameters(
                 buffer_config, **search_params_kwargs
             )
@@ -339,6 +349,7 @@ def search(
                         "search_buffer_capacity": index.search_parameters.buffer_config.search_buffer_capacity,
                         "prefetch_lookahead": index.search_parameters.prefetch_lookahead,
                         "prefetch_step": index.search_parameters.prefetch_step,
+                        "search_buffer_visited_set": index.search_parameters.search_buffer_visited_set,
                     },
                     "batch_size": batch_size,
                     "recall": recall,
@@ -377,6 +388,9 @@ def main(argv: str | None = None) -> None:
         search_buffer_capacities=args.search_buffer_capacity,
         prefetch_lookaheads=args.prefetch_lookahead,
         prefetch_steps=args.prefetch_step,
+        search_buffer_visited_set=(
+            False if args.no_search_buffer_visited_set else None
+        ),
         num_rep=args.num_rep,
         static=args.static,
         distance=consts.STR_TO_DISTANCE[args.distance],
