@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 
 [[package]]
@@ -241,9 +241,13 @@ name = "svsbench"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
-    { name = "scalable-vs" },
     { name = "tqdm" },
     { name = "typer-slim" },
+]
+
+[package.optional-dependencies]
+svs = [
+    { name = "scalable-vs" },
 ]
 
 [package.dev-dependencies]
@@ -256,10 +260,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=2.4" },
-    { name = "scalable-vs", specifier = ">=0.0.7" },
+    { name = "scalable-vs", marker = "extra == 'svs'", specifier = ">=0.0.7" },
     { name = "tqdm", specifier = ">=4.67" },
     { name = "typer-slim", specifier = ">=0.15.2" },
 ]
+provides-extras = ["svs"]
 
 [package.metadata.requires-dev]
 dev = [

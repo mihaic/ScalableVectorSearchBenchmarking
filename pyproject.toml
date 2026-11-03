@@ -9,9 +9,15 @@ dynamic = ["version"]
 requires-python = ">=3.12"
 dependencies = [
     "numpy>=2.4",
-    "scalable-vs>=0.0.7",
     "tqdm>=4.67",
     "typer-slim>=0.15.2",
+]
+
+[project.optional-dependencies]
+# SVS Python bindings, required by all commands except the *_capi ones.
+# Not available for free-threaded Python.
+svs = [
+    "scalable-vs>=0.0.7",
 ]
 
 [build-system]

@@ -1,35 +1,25 @@
 # Copyright (C) 2025 Intel Corporation
 # SPDX-License-Identifier: Apache-2.0
-"""Constants."""
+"""Constants.
 
-from typing import Final
+Constants that depend on the SVS Python bindings are created lazily on
+first access so that modules using only the C API can be imported
+without the bindings, e.g., on free-threaded Python.
+"""
+
+from typing import Any, Final
 
 import numpy as np
-import svs
 
 DEFAULT_LEANVEC_DIMS: Final[int] = -4
 DEFAULT_LEANVEC_TRAIN_MAX_VECTORS: Final[int] = 100_000
 
-DISTANCE_TO_ALPHA: Final[dict[svs.DistanceType, float]] = {
-    svs.DistanceType.Cosine: 0.95,
-    svs.DistanceType.L2: 1.2,
-    svs.DistanceType.MIP: 0.95,
-}
+DISTANCES: Final = ("cosine", "l2", "mip")
 
-STR_TO_DISTANCE: Final[dict[str, svs.DistanceType]] = {
-    "cosine": svs.DistanceType.Cosine,
-    "l2": svs.DistanceType.L2,
-    "mip": svs.DistanceType.MIP,
-}
-
-DISTANCE_TO_STR: Final[dict[svs.DistanceType, str]] = {
-    v: k for k, v in STR_TO_DISTANCE.items()
-}
-
-SUFFIX_TO_DATA_TYPE: Final = {
-    ".fvecs": svs.DataType.float32,
-    ".hvecs": svs.DataType.float16,
-    ".ivecs": svs.DataType.uint32,
+STR_TO_ALPHA: Final[dict[str, float]] = {
+    "cosine": 0.95,
+    "l2": 1.2,
+    "mip": 0.95,
 }
 
 SUFFIX_TO_SVS_TYPE: Final = {
@@ -53,13 +43,53 @@ SVS_TYPE_TO_DTYPE: Final = {
     "float32": np.float32,
 }
 
-STR_TO_DATA_TYPE: Final = {
-    "float16": svs.DataType.float16,
-    "float32": svs.DataType.float32,
-}
 
-STR_TO_LVQ_STRATEGY: Final[dict[str, svs.LVQStrategy]] = {
-    "auto": svs.LVQStrategy.Auto,
-    "sequential": svs.LVQStrategy.Sequential,
-    "turbo": svs.LVQStrategy.Turbo,
-}
+def _svs_constants() -> dict[str, Any]:
+    import svs
+
+    str_to_distance = {
+        "cosine": svs.DistanceType.Cosine,
+        "l2": svs.DistanceType.L2,
+        "mip": svs.DistanceType.MIP,
+    }
+    return {
+        "DISTANCE_TO_ALPHA": {
+            str_to_distance[k]: v for k, v in STR_TO_ALPHA.items()
+        },
+        "STR_TO_DISTANCE": str_to_distance,
+        "DISTANCE_TO_STR": {v: k for k, v in str_to_distance.items()},
+        "SUFFIX_TO_DATA_TYPE": {
+            ".fvecs": svs.DataType.float32,
+            ".hvecs": svs.DataType.float16,
+            ".ivecs": svs.DataType.uint32,
+        },
+        "STR_TO_DATA_TYPE": {
+            "float16": svs.DataType.float16,
+            "float32": svs.DataType.float32,
+        },
+        "STR_TO_LVQ_STRATEGY": {
+            "auto": svs.LVQStrategy.Auto,
+            "sequential": svs.LVQStrategy.Sequential,
+            "turbo": svs.LVQStrategy.Turbo,
+        },
+    }
+
+
+_SVS_CONSTANT_NAMES: Final = frozenset(
+    (
+        "DISTANCE_TO_ALPHA",
+        "STR_TO_DISTANCE",
+        "DISTANCE_TO_STR",
+        "SUFFIX_TO_DATA_TYPE",
+        "STR_TO_DATA_TYPE",
+        "STR_TO_LVQ_STRATEGY",
+    )
+)
+
+
+def __getattr__(name: str) -> Any:
+    if name in _SVS_CONSTANT_NAMES:
+        constants = _svs_constants()
+        globals().update(constants)
+        return constants[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

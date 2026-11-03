@@ -3,14 +3,20 @@
 import json
 import logging
 import os
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 from warnings import warn
 
-import svs
+import numpy as np
+import numpy.typing as npt
 
 from . import consts, __version__
+
+if TYPE_CHECKING:
+    import svs
 
 UNCOMMITTED: Final = "--uncommitted"
 
@@ -220,7 +226,7 @@ def add_common_arguments(parser):
 def ground_truth_path(
     vecs_path: Path,
     queries_file: Path,
-    distance: svs.DistanceType,
+    distance: "svs.DistanceType",
     num_vectors: int | None,
     seed: int | None = None,
 ) -> Path:
@@ -264,3 +270,47 @@ def check_uncommitted_and_log_version(
         else:
             logger.warning("uncommitted_code_changes")
     logger.info({"version": __version__})
+
+
+def default_max_threads() -> int:
+    """Return the default maximum number of threads."""
+    return max(len(os.sched_getaffinity(0)) - 1, 1)
+
+
+def run_in_threads(
+    executor: ThreadPoolExecutor,
+    num_threads: int,
+    num_items: int,
+    items_per_call: int,
+    function: Callable[[int, int], Any],
+) -> None:
+    """Call function(first, count) on num_threads threads.
+
+    The items [0, num_items) are split into calls of at most
+    items_per_call items, assigned round-robin to the threads.
+    """
+    num_calls = -(-num_items // items_per_call)
+    num_threads = min(num_threads, num_calls)
+
+    def worker(thread_idx: int) -> None:
+        for call_idx in range(thread_idx, num_calls, num_threads):
+            first = call_idx * items_per_call
+            function(first, min(items_per_call, num_items - first))
+
+    for future in [
+        executor.submit(worker, thread_idx)
+        for thread_idx in range(num_threads)
+    ]:
+        future.result()
+
+
+def k_recall_at(
+    ground_truth: npt.NDArray, results: npt.NDArray, k: int, at: int
+) -> float:
+    """Compute k-recall@at like svs.k_recall_at for rows without duplicates."""
+    if k > at:
+        raise ValueError(f"{k=} must be less than or equal to {at=}")
+    matches = (
+        ground_truth[:, :k, np.newaxis] == results[:, np.newaxis, :at]
+    ).any(axis=2)
+    return float(matches.sum() / (ground_truth.shape[0] * k))

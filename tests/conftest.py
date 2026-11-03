@@ -6,14 +6,28 @@ from typing import Final
 
 import numpy as np
 import pytest
-import svs
 
 from svsbench import consts
 
-INT_TO_LEANVEC_KIND: Final = {
-    4: svs.LeanVecKind.lvq4,
-    8: svs.LeanVecKind.lvq8,
-}
+try:
+    import svs
+except ImportError:
+    # The SVS Python bindings are not available, e.g., on free-threaded
+    # Python, so only the C API tests run.
+    svs = None
+    collect_ignore = [
+        "test_build.py",
+        "test_compress.py",
+        "test_generate_leanvec_matrices.py",
+        "test_loader.py",
+        "test_search.py",
+        "test_utils.py",
+    ]
+else:
+    INT_TO_LEANVEC_KIND: Final = {
+        4: svs.LeanVecKind.lvq4,
+        8: svs.LeanVecKind.lvq8,
+    }
 
 
 def random_array(dtype: np.dtype) -> np.ndarray:
