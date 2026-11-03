@@ -145,3 +145,16 @@ python -m svsbench.search_capi \
 The search logs the throughput and the latency per C API call. The C API
 supports fewer build parameters than the Python bindings: `prune_to` is
 `graph_max_degree - 4` and `max_candidate_pool_size` is `3 * window_size`.
+
+### Rust implementation
+
+`rust/` contains Rust ports of `build_capi` and `search_capi` with the same
+options (except `--shuffle` and `--num_vectors_delete`), log format and index
+names. They load the library from `SVS_C_API_LIB` at run time and read only
+`.fvecs` vectors:
+
+```sh
+cargo build --release --manifest-path rust/Cargo.toml
+rust/target/release/build_capi --vecs_file /path/to/vectors.fvecs ...
+rust/target/release/search_capi --idx_dir /path/to/index_dir ...
+```

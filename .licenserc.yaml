@@ -17,6 +17,7 @@ header:
     - "pyproject.toml"
     - "README.md"
     - "requirements.txt"
+    - "rust/Cargo.lock"
     - "SECURITY.md"
     - "uv.lock"
 
