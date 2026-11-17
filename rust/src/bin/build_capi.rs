@@ -3,8 +3,8 @@
 //! Benchmark SVS dynamic index addition using the SVS C API.
 //!
 //! Rust port of `svsbench.build_capi`, with the same options except
-//! --shuffle and --num_vectors_delete. The index uses
-//! SVS_SYNC_KIND_FINE_GRAIN. Vectors are added by max_threads threads
+//! --shuffle and --num_vectors_delete, and with --sync_kind and
+//! --convert_after_add. Vectors are added by max_threads threads
 //! concurrently, call_size vectors per C API call.
 
 use std::path::PathBuf;
@@ -85,6 +85,13 @@ struct Args {
     /// with svs_index_convert_dynamic_ex
     #[arg(long = "convert")]
     convert: bool,
+    /// With --convert, convert after adding all vectors instead of after
+    /// building the initial index
+    #[arg(long = "convert_after_add", requires = "convert")]
+    convert_after_add: bool,
+    /// Index synchronization kind (NONE requires max_threads 1)
+    #[arg(long = "sync_kind", default_value = "FINE_GRAIN", value_parser = PossibleValuesParser::new(["NONE", "GLOBAL", "FINE_GRAIN"]))]
+    sync_kind: String,
     /// Do not save built index
     #[arg(long = "no_save")]
     no_save: bool,
@@ -114,6 +121,15 @@ fn main() -> Result<()> {
         None => args.batch_size,
     });
     let max_threads = args.max_threads.unwrap_or_else(utils::default_max_threads);
+    let sync_kind = match args.sync_kind.as_str() {
+        "NONE" => SyncKind::None,
+        "GLOBAL" => SyncKind::Global,
+        _ => SyncKind::FineGrain,
+    };
+    if sync_kind == SyncKind::None && max_threads != 1 {
+        anyhow::bail!("sync_kind NONE requires max_threads 1");
+    }
+    let convert_init = args.convert && !args.convert_after_add;
     let max_threads_init = args.max_threads_init.unwrap_or(max_threads);
     let pool_threads = args.pool_threads.unwrap_or(max_threads);
     let train_queries = match &args.train_query_file {
@@ -145,21 +161,21 @@ fn main() -> Result<()> {
     let mut ingest_time = vec![0.0; num_batches + 1];
     let vector_ids: Vec<usize> = (0..num_vectors).collect();
 
-    let index = match &args.idx_dir {
+    let mut index = match &args.idx_dir {
         None => {
             let init = Matrix { data: &vectors[..num_vectors_init * dim], dim };
             let start = Instant::now();
             let mut index = if args.convert {
                 let float32 = BuilderConfig { svs_type: "float32".to_owned(), ..config.clone() };
-                DynamicIndex::build(init, &vector_ids[..num_vectors_init], &float32, None, SyncKind::FineGrain)?
+                DynamicIndex::build(init, &vector_ids[..num_vectors_init], &float32, None, sync_kind)?
             } else {
-                DynamicIndex::build(init, &vector_ids[..num_vectors_init], &config, training, SyncKind::FineGrain)?
+                DynamicIndex::build(init, &vector_ids[..num_vectors_init], &config, training, sync_kind)?
             };
             let mut index_build_time = start.elapsed().as_secs_f64();
             logger.info(json!({"index_build_time": index_build_time}));
-            if args.convert {
+            if convert_init {
                 let start = Instant::now();
-                index = index.convert(&config, training, SyncKind::FineGrain)?;
+                index = index.convert(&config, training, sync_kind)?;
                 let index_convert_time = start.elapsed().as_secs_f64();
                 logger.info(json!({"index_convert_time": index_convert_time}));
                 index_build_time += index_convert_time;
@@ -167,7 +183,7 @@ fn main() -> Result<()> {
             ingest_time[0] = index_build_time;
             index
         }
-        Some(idx_dir) => DynamicIndex::load(idx_dir, dim, &config, SyncKind::FineGrain)?,
+        Some(idx_dir) => DynamicIndex::load(idx_dir, dim, &config, sync_kind)?,
     };
     logger.info(json!({"sync_kind": index.sync_kind()?.name()}));
 
@@ -195,6 +211,12 @@ fn main() -> Result<()> {
             "rsd": utils::std_ddof(add_time) / add_time_mean,
         }}));
         logger.info(json!({"build_and_add_time": ingest_time.iter().sum::<f64>()}));
+    }
+    if args.convert_after_add && args.idx_dir.is_none() {
+        let start = Instant::now();
+        index = index.convert(&config, training, sync_kind)?;
+        logger.info(json!({"index_convert_time": start.elapsed().as_secs_f64()}));
+        logger.info(json!({"sync_kind": index.sync_kind()?.name()}));
     }
     logger.info(json!({"index_size": index.size()?}));
 
